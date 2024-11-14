@@ -86,6 +86,12 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Create release dir
+        run: |
+          mkdir -p .cr-release-packages
+          cp -r .cr-release/* .cr-release-packages/ || true
+          cp .cr-index/index.yaml .cr-release-packages/ || true
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
