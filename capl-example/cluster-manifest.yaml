@@ -177,12 +177,8 @@ spec:
     timeout: 5m
     wait: true
     waitForJobs: true
-  repoURL: gchr.io/komer/node-ipam-controller
-  valuesTemplate: |
-    image:
-      repository: gchr.io/komer/node-ipam-controller
-      tag: latest
-  version: latest
+  repoURL: https://komer3.github.io/node-ipam-controller
+  version: v0.0.1
 ---
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
