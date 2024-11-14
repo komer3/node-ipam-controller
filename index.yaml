@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  node-ipam-controller:
+  - apiVersion: v2
+    appVersion: 0.0.1
+    created: "2024-11-14T18:52:39.83775274Z"
+    description: A Helm chart for node-ipam-controller
+    digest: dbd9b077a53c76ce9249f7be867a1f6293c8a459a82f27192d9d01288155d6d3
+    name: node-ipam-controller
+    type: application
+    urls:
+    - https://github.com/komer3/node-ipam-controller/releases/download/node-ipam-controller-0.0.1/node-ipam-controller-0.0.1.tgz
+    version: 0.0.1
+generated: "2024-11-14T18:52:39.837789449Z"
