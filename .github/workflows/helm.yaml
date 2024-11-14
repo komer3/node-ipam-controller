@@ -82,7 +82,7 @@ jobs:
 
       - name: Create Index
         run: |
-          helm repo index --url https://komer.github.io/node-ipam-controller .cr-release-packages
+          helm repo index --url https://komer3.github.io/node-ipam-controller .cr-release-packages
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
