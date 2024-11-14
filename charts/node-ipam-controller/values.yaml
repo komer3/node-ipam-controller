@@ -25,9 +25,9 @@ leaderElection:
 # resourceName: "node-ipam-controller"
 
 image:
-  repository: gchr.io/komer3/node-ipam-controller
+  repository: ghcr.io/komer3/node-ipam-controller
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: latest
 
 nameOverride: ""
 fullnameOverride: ""
