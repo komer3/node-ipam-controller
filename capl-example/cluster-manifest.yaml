@@ -1,0 +1,481 @@
+apiVersion: v1
+data:
+  cilium-policy.yaml: |-
+    apiVersion: "cilium.io/v2"
+    kind: CiliumClusterwideNetworkPolicy
+    metadata:
+      name: "default-cluster-policy"
+    spec:
+      description: "allow cluster intra cluster traffic"
+      endpointSelector: {}
+      ingress:
+        - fromEntities:
+            - cluster
+        - fromCIDR:
+            - 10.0.0.0/8
+            - 192.168.128.0/17
+    ---
+    apiVersion: "cilium.io/v2"
+    kind: CiliumClusterwideNetworkPolicy
+    metadata:
+      name: "default-external-policy"
+    spec:
+      description: "allow api server traffic"
+      nodeSelector: {}
+      ingress:
+        - fromEntities:
+            - cluster
+        - fromCIDR:
+            - 10.0.0.0/8
+        - fromEntities:
+            - all
+          toPorts:
+            - ports:
+              - port: "6443"
+kind: ConfigMap
+metadata:
+  name: test-cluster1-cilium-policy
+  namespace: default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    clusterctl.cluster.x-k8s.io/move: "true"
+  name: test-cluster1-credentials
+  namespace: default
+stringData:
+  apiToken: ${LINODE_TOKEN}
+  dnsToken: ${LINODE_TOKEN}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: linode-test-cluster1-crs-0
+  namespace: default
+stringData:
+  linode-token-region.yaml: |-
+    kind: Secret
+    apiVersion: v1
+    metadata:
+      name: linode-token-region
+      namespace: kube-system
+    stringData:
+      apiToken: ${LINODE_TOKEN}
+      region: ${LINODE_REGION}
+type: addons.cluster.x-k8s.io/resource-set
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: test-cluster1-cilium
+  namespace: default
+spec:
+  chartName: cilium
+  clusterSelector:
+    matchLabels:
+      cni: test-cluster1-cilium
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://helm.cilium.io/
+  valuesTemplate: |
+    bgpControlPlane:
+      enabled: true
+    routingMode: native
+    kubeProxyReplacement: true
+    ipv4NativeRoutingCIDR: 10.0.0.0/8
+    tunnelProtocol: ""
+    enableIPv4Masquerade: true
+    policyAuditMode: true
+    hostFirewall:
+      enabled: true
+    extraConfig:
+      allow-localhost: policy
+    k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
+    k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
+    extraArgs:
+    - --nodeport-addresses=0.0.0.0/0
+    ipam:
+      mode: kubernetes
+    ipv4:
+      enabled: true
+    ipv6:
+      enabled: false
+    k8s:
+      requireIPv4PodCIDR: true
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true
+  version: 1.15.4
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: test-cluster1-csi-driver-linode
+  namespace: default
+spec:
+  chartName: linode-blockstorage-csi-driver
+  clusterSelector:
+    matchLabels:
+      csi: test-cluster1-linode
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://linode.github.io/linode-blockstorage-csi-driver/
+  valuesTemplate: |
+    secretRef:
+      name: "linode-token-region"
+      apiTokenRef: "apiToken"
+  version: v0.8.4
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: test-cluster1-linode-cloud-controller-manager
+  namespace: default
+spec:
+  chartName: ccm-linode
+  clusterSelector:
+    matchLabels:
+      ccm: test-cluster1-linode
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://linode.github.io/linode-cloud-controller-manager/
+  valuesTemplate: |
+    routeController:
+      vpcName: {{ .InfraCluster.spec.vpcRef.name }}
+      clusterCIDR: 10.0.0.0/8
+      configureCloudRoutes: true
+    secretRef:
+      name: "linode-token-region"
+    image:
+      pullPolicy: IfNotPresent
+  version: v0.4.16
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: test-cluster1-node-ipam-controller
+  namespace: default
+spec:
+  chartName: node-ipam-controller
+  clusterSelector:
+    matchLabels:
+      ipam: test-cluster1-node-ipam
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: gchr.io/komer/node-ipam-controller
+  valuesTemplate: |
+    image:
+      repository: gchr.io/komer/node-ipam-controller
+      tag: latest
+  version: latest
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: test-cluster1-cilium-policy
+  namespace: default
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: test-cluster1
+  resources:
+  - kind: ConfigMap
+    name: test-cluster1-cilium-policy
+  strategy: Reconcile
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: test-cluster1-crs-0
+  namespace: default
+spec:
+  clusterSelector:
+    matchLabels:
+      crs: test-cluster1-crs
+  resources:
+  - kind: Secret
+    name: linode-test-cluster1-crs-0
+  strategy: Reconcile
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: test-cluster1-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+          name: '{{ ds.meta_data.label }}'
+      preKubeadmCommands:
+      - curl -fsSL https://github.com/linode/cluster-api-provider-linode/raw/dd76b1f979696ef22ce093d420cdbd0051a1d725/scripts/pre-kubeadminit.sh
+        | bash -s v1.29.1
+      - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    ccm: test-cluster1-linode
+    cluster: test-cluster1
+    cni: test-cluster1-cilium
+    crs: test-cluster1-crs
+    csi: test-cluster1-linode
+  name: test-cluster1
+  namespace: default
+spec:
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: test-cluster1-control-plane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+    kind: LinodeCluster
+    name: test-cluster1
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: test-cluster1-md-0
+  namespace: default
+spec:
+  clusterName: test-cluster1
+  replicas: 1
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: test-cluster1-md-0
+      clusterName: test-cluster1
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeMachineTemplate
+        name: test-cluster1-md-0
+      version: v1.29.1
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+  name: test-cluster1-control-plane
+  namespace: default
+spec:
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        extraArgs:
+          cloud-provider: external
+      controllerManager:
+        extraArgs:
+          cloud-provider: external
+          allocate-node-cidrs: "false"
+      etcd:
+        local:
+          dataDir: /var/lib/etcd_data/etcd
+          extraArgs:
+            quota-backend-bytes: "8589934592"
+    initConfiguration:
+      localAPIEndpoint:
+        bindPort: 6443
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+        name: '{{ ds.meta_data.label }}'
+      skipPhases:
+      - addon/kube-proxy
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+        name: '{{ ds.meta_data.label }}'
+    preKubeadmCommands:
+    - curl -fsSL https://github.com/linode/cluster-api-provider-linode/raw/dd76b1f979696ef22ce093d420cdbd0051a1d725/scripts/pre-kubeadminit.sh
+      | bash -s v1.29.1
+    - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeMachineTemplate
+      name: test-cluster1-control-plane
+  replicas: 1
+  version: v1.29.1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeCluster
+metadata:
+  name: test-cluster1
+  namespace: default
+spec:
+  credentialsRef:
+    name: test-cluster1-credentials
+  network:
+    apiserverLoadBalancerPort: 6443
+  nodeBalancerFirewallRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+    kind: LinodeFirewall
+    name: test-cluster1-nb
+  region: us-ord
+  vpcRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+    kind: LinodeVPC
+    name: test-cluster1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeFirewall
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: test-cluster1
+  name: test-cluster1
+  namespace: default
+spec:
+  credentialsRef:
+    name: test-cluster1-credentials
+  enabled: false
+  inboundPolicy: DROP
+  inboundRules:
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 10.0.0.0/8
+    description: accept all tcp traffic within the vpc
+    label: intra-cluster-tcp
+    ports: 1-65535
+    protocol: TCP
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 10.0.0.0/8
+    description: accept all udp traffic within the vpc
+    label: intra-cluster-udp
+    ports: 1-65535
+    protocol: UDP
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 10.0.0.0/8
+    description: accept all icmp traffic within the vpc
+    label: intra-cluster-icmp
+    protocol: ICMP
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 192.168.255.0/24
+    description: accept all api server related traffic from nodebalancers
+    label: inbound-api-server
+    ports: "6443"
+    protocol: TCP
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 192.168.255.0/24
+    description: accept traffic from the entire NodeBalancer CIDR to the NodePort
+      service range
+    label: accept-NodeBalancer
+    ports: 30000-32767
+    protocol: TCP
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeFirewall
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: test-cluster1
+  name: test-cluster1-nb
+  namespace: default
+spec:
+  credentialsRef:
+    name: test-cluster1-credentials
+  enabled: false
+  inboundPolicy: DROP
+  inboundRules:
+  - action: ACCEPT
+    addresses:
+      ipv4:
+      - 0.0.0.0/0
+      ipv6:
+      - ::/0
+    description: accept all api server related traffic from nodebalancers
+    label: inbound-api-server
+    ports: "6443"
+    protocol: TCP
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+  name: test-cluster1-control-plane
+  namespace: default
+spec:
+  template:
+    spec:
+      authorizedKeys: null
+      firewallRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeFirewall
+        name: test-cluster1
+      image: linode/ubuntu22.04
+      interfaces:
+      - purpose: public
+      region: us-ord
+      type: g6-standard-2
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+  name: test-cluster1-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+      authorizedKeys: null
+      firewallRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeFirewall
+        name: test-cluster1
+      image: linode/ubuntu22.04
+      interfaces:
+      - purpose: public
+      region: us-ord
+      type: g6-standard-2
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeVPC
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: test-cluster1
+  name: test-cluster1
+  namespace: default
+spec:
+  credentialsRef:
+    name: test-cluster1-credentials
+  region: us-ord
+  subnets:
+  - ipv4: 10.0.0.0/8
+    label: default
+---
+apiVersion: networking.x-k8s.io/v1
+kind: ClusterCIDR
+metadata:
+  name: clustercidr-test
+spec:
+  perNodeHostBits: 8
+  ipv4: 10.0.0.0/8
