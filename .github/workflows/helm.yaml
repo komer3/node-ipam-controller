@@ -79,23 +79,22 @@ jobs:
         uses: helm/chart-releaser-action@v1.6.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_SKIP_EXISTING: "true"
         with:
           charts_dir: charts
-          skip_existing: true
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Create release dir
+      - name: List files
         run: |
-          mkdir -p .cr-release-packages
-          cp -r .cr-release/* .cr-release-packages/ || true
-          cp .cr-index/index.yaml .cr-release-packages/ || true
+          ls -la
+          ls -la .cr-* || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.cr-release-packages'
+          path: '.cr-index'
 
       - name: Deploy to GitHub Pages
         id: deployment
