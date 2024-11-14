@@ -13,7 +13,12 @@
 # limitations under the License.
 
 GIT_TAG ?= $(shell git describe --tags --always --dirty)
-GOENV ?= GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+# Default to linux/amd64 if detection fails
+DEFAULT_GOOS ?= linux
+DEFAULT_GOARCH ?= amd64
+GOOS ?= $(shell go env GOOS || echo $(DEFAULT_GOOS))
+GOARCH ?= $(shell go env GOARCH || echo $(DEFAULT_GOARCH))
+GOENV ?= GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 LDFLAGS ?= -X main.Version=$(GIT_TAG)
 IMAGE_REGISTRY ?= gcr.io/k8s-staging-networking
 IMAGE_NAME := node-ipam-controller
