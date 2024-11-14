@@ -75,13 +75,16 @@ jobs:
           sed -ie "s/appVersion: \"latest\"/appVersion: ${TAG}/g" ./charts/node-ipam-controller/Chart.yaml
           sed -ie "s/version: 0.0.0/version: ${TAG}/g" ./charts/node-ipam-controller/Chart.yaml
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          CR_SKIP_EXISTING: "true"
-        with:
-          charts_dir: charts
+      - name: Package Helm Chart
+        run: |
+          mkdir -p .cr-release-packages
+          helm package charts/node-ipam-controller --destination .cr-release-packages
+
+      - name: Create Index
+        run: |
+          mkdir -p .cr-index
+          helm repo index --url https://komer.github.io/node-ipam-controller .cr-release-packages
+          cp .cr-release-packages/index.yaml .cr-index/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
