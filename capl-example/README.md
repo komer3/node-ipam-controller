@@ -1,47 +1,102 @@
-# CAPL (Cluster API Provider Linode) Example
+# CAPL Example
 
-This directory contains example manifests and scripts for deploying the node-ipam-controller in a Cluster API Provider Linode (CAPL) environment.
-
-## Contents
-
-- `cluster-manifest.yaml`: A comprehensive manifest that includes all the necessary components for a CAPL cluster:
-  - Cilium Network Policies for cluster traffic management
-  - Cluster API resources for Linode infrastructure
-  - Node configurations and firewall rules
-  - ClusterCIRD for IPAM controller
-  - and more
-  
-- `apply-manifest.sh`: A helper script to apply the cluster manifest with proper environment variable substitution.
+This example demonstrates how to deploy a Kubernetes cluster using Cluster API Provider Linode (CAPL) with custom networking configuration using Cilium CNI and the node-ipam-controller.
 
 ## Prerequisites
 
-Before using these examples, ensure you have:
+- Linode API Token with read/write access
+- `kubectl` configured with access to a management cluster
+- `clusterctl` installed
+- Helm 3.x installed
 
-1. A Linode account and API token
-2. kubectl installed and configured
-3. A functioning CAPL management cluster with the latest release installed ([Getting Started Guide](https://linode.github.io/cluster-api-provider-linode/topics/getting-started.html))
-4. The following environment variables set:
-   - `LINODE_TOKEN`: Your Linode API token
-   - `LINODE_REGION`: The target Linode region for deployment
-   - `LINODE_SSH_KEY`: Your Linode SSH public key
+## Configuration Overview
 
-## Usage
+### Network Architecture
 
-1. Set the required environment variables:
-   ```bash
-   export LINODE_TOKEN="your-linode-token"
-   export LINODE_REGION="your-preferred-region"
-   export LINODE_SSH_KEY="your-ssh-public-key" 
-   ```
+The cluster uses the following networking configuration:
 
-2. Run the apply script:
-   ```bash
-   ./apply-manifest.sh
-   ```
+- Pod CIDR: `10.0.0.0/8`
+- Native routing mode with BGP enabled
+- Host firewall enabled with policy audit mode
+- Direct node-to-node routing
 
-The script will validate that all required environment variables are set and then apply the cluster manifest with the appropriate substitutions.
+### Components
 
-## Related Documentation
+1. **Cilium CNI**
+   - Version: 1.15.4
+   - Configuration:
+     - Native routing mode
+     - BGP control plane enabled
+     - Host firewall enabled
+     - Policy audit mode
+     - Direct node routing enabled
+     - IPv4 masquerade enabled
 
-- [Node IPAM Controller Documentation](../README.md)
-- [Cluster API Provider Linode (CAPL) Documentation](https://linode.github.io/cluster-api-provider-linode)
+2. **Node IPAM Controller**
+   - Version: v0.0.1
+   - Manages pod CIDR allocation
+   - Runs on control plane node
+   - Uses host network and kubeconfig
+
+3. **Network Policies**
+   - Default cluster-wide policy allowing:
+     - Intra-cluster traffic
+     - Traffic from `10.0.0.0/8`
+     - API server access (port 6443)
+     - Kubelet access (port 10250)
+
+## Deployment
+
+1. Set environment variables:
+```bash
+export LINODE_TOKEN="your-token-here"
+export LINODE_REGION="us-east"  # or your preferred region
+```
+
+2. Deploy the cluster:
+```bash
+./apply-manifest.sh
+```
+
+## Verification
+
+1. Check node status:
+```bash
+kubectl get nodes -o wide
+```
+
+2. Verify Cilium status:
+```bash
+kubectl get pods -n kube-system -l k8s-app=cilium
+```
+
+3. Check IPAM controller:
+```bash
+kubectl get pods -l app.kubernetes.io/name=node-ipam-controller
+```
+
+## Troubleshooting
+
+Common issues and solutions:
+
+1. **Node-to-Node Connectivity**
+   - Ensure Cilium policies allow port 10250 for kubelet access
+   - Check BGP peering status
+   - Verify direct node routes are configured
+
+2. **Pod CIDR Allocation**
+   - Verify ClusterCIDR resource is created
+   - Check node-ipam-controller logs
+   - Ensure IPAM mode is set to "kubernetes" in Cilium
+
+3. **Network Policy**
+   - Check Cilium policy status
+   - Verify policy audit mode if needed
+   - Ensure correct CIDR ranges in policies
+
+## Notes
+
+- The node-ipam-controller must run on the control plane node for proper API server access
+- Host firewall rules are managed by Cilium
+- BGP is enabled for native routing between nodes
+- Policy audit mode allows observing policy violations without enforcement

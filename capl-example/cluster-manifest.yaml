@@ -184,6 +184,11 @@ spec:
     waitForJobs: true
   repoURL: https://komer3.github.io/node-ipam-controller
   version: v0.0.1
+  valuesTemplate: |
+    installCRDs: true
+    clusterCIDR:
+      perNodeHostBits: 8
+      ipv4CIDR: "10.0.0.0/8"
 ---
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
