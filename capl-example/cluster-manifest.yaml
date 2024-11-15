@@ -94,17 +94,26 @@ spec:
     hostFirewall:
       enabled: true
     autoDirectNodeRoutes: true
+    bpf:
+      masquerade: true
+      hostRouting: true
     extraConfig:
       allow-localhost: policy
-      enable-endpoint-routes: true
-      auto-direct-node-routes: true
-      enable-host-reachable-services: true
     k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
     k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
     extraArgs:
     - --nodeport-addresses=0.0.0.0/0
+    - --enable-endpoint-routes
+    - --enable-l7-proxy=false
+    nodePort:
+      enabled: true
+      bindProtection: true
+    hostPort:
+      enabled: true
     ipam:
       mode: kubernetes
+      operator:
+        clusterPoolIPv4PodCIDRList: ["10.0.0.0/8"]
     ipv4:
       enabled: true
     ipv6:
