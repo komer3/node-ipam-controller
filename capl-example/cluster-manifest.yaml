@@ -467,11 +467,3 @@ spec:
   subnets:
   - ipv4: 10.0.0.0/8
     label: default
----
-apiVersion: networking.x-k8s.io/v1
-kind: ClusterCIDR
-metadata:
-  name: clustercidr-test
-spec:
-  perNodeHostBits: 8
-  ipv4: 10.0.0.0/8

@@ -97,5 +97,8 @@ tolerations:
   - effect: NoSchedule
     key: node.kubernetes.io/network-unavailable
     operator: Exists
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"
 affinity: {}
 installCRDs: true
