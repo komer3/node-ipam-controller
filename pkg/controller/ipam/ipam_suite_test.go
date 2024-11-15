@@ -72,7 +72,7 @@ var _ = ginkgo.BeforeSuite(func() {
 
 	ginkgo.By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("../../..", "charts", "node-ipam-controller", "gen", "crds")},
+		CRDDirectoryPaths:     []string{filepath.Join("../../..", "charts", "node-ipam-controller", "crds")},
 		ErrorIfCRDPathMissing: true,
 	}
 
