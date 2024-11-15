@@ -23,6 +23,7 @@ Before using these examples, ensure you have:
 4. The following environment variables set:
    - `LINODE_TOKEN`: Your Linode API token
    - `LINODE_REGION`: The target Linode region for deployment
+   - `LINODE_SSH_KEY`: Your Linode SSH public key
 
 ## Usage
 
@@ -30,6 +31,7 @@ Before using these examples, ensure you have:
    ```bash
    export LINODE_TOKEN="your-linode-token"
    export LINODE_REGION="your-preferred-region"
+   export LINODE_SSH_KEY="your-ssh-public-key" 
    ```
 
 2. Run the apply script:

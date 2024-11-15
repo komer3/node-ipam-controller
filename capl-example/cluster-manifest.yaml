@@ -32,6 +32,7 @@ data:
           toPorts:
             - ports:
               - port: "6443"
+              - port: "10250"
 kind: ConfigMap
 metadata:
   name: test-cluster1-cilium-policy
@@ -92,8 +93,12 @@ spec:
     policyAuditMode: true
     hostFirewall:
       enabled: true
+    autoDirectNodeRoutes: true
     extraConfig:
       allow-localhost: policy
+      enable-endpoint-routes: true
+      auto-direct-node-routes: true
+      enable-host-reachable-services: true
     k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
     k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
     extraArgs:
@@ -171,7 +176,7 @@ spec:
   chartName: node-ipam-controller
   clusterSelector:
     matchLabels:
-      ipam: test-cluster1-node-ipam
+      ipam: test-cluster1-ipam
   namespace: kube-system
   options:
     timeout: 5m
@@ -235,6 +240,7 @@ metadata:
     cni: test-cluster1-cilium
     crs: test-cluster1-crs
     csi: test-cluster1-linode
+    ipam: test-cluster1-ipam
   name: test-cluster1
   namespace: default
 spec:
@@ -423,7 +429,8 @@ metadata:
 spec:
   template:
     spec:
-      authorizedKeys: null
+      authorizedKeys:
+      - ${LINODE_SSH_KEY}
       firewallRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeFirewall
@@ -442,7 +449,8 @@ metadata:
 spec:
   template:
     spec:
-      authorizedKeys: null
+      authorizedKeys:
+      - ${LINODE_SSH_KEY}
       firewallRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeFirewall

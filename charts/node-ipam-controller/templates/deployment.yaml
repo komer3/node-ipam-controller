@@ -48,9 +48,11 @@ spec:
          {{- if not .Values.leaderElection.enabled }}
           args:
           - --enable-leader-election=false
+          - --kubeconfig=/etc/kubernetes/admin.conf
          {{- else}}
           args:
-         {{- include "node-ipam-controller.leaderElection" . | nindent 12 }}
+          - --enable-leader-election=false
+          - --kubeconfig=/etc/kubernetes/admin.conf
          {{- end }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
@@ -58,18 +60,18 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: 8081
               protocol: TCP
           livenessProbe:
             httpGet:
               path: /healthz
-              port: http
+              port: 8081
             initialDelaySeconds: 15
             periodSeconds: 20
           readinessProbe:
             httpGet:
               path: /readyz
-              port: http
+              port: 8081
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
@@ -83,6 +85,15 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          volumeMounts:
+          - name: host-kubeconfig
+            mountPath: /etc/kubernetes
+            readOnly: true
+      volumes:
+      - name: host-kubeconfig
+        hostPath:
+          path: /etc/kubernetes
+          type: Directory
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
