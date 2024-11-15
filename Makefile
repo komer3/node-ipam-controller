@@ -85,8 +85,8 @@ CONTROLLER_GEN = go run sigs.k8s.io/controller-tools/cmd/controller-gen
 .PHONY: manifests
 manifests: ## Generate CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd paths="./..." \
-		output:crd:artifacts:config=charts/node-ipam-controller/gen/crds \
-		output:rbac:dir=charts/node-ipam-controller/gen
+		output:crd:artifacts:config=charts/node-ipam-controller/crds \
+		output:rbac:dir=charts/node-ipam-controller/templates
 
 .PHONY: generate
 generate: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
