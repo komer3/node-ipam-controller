@@ -120,4 +120,4 @@ installCRDs: true
 createCIDR: false
 clusterCIDR:
   perNodeHostBits: 8
-  ipv4CIDR: "10.0.0.0/8"
+  ipv4CIDR: "10.192.0.0/10"

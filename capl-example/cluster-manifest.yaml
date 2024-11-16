@@ -104,7 +104,6 @@ spec:
     extraArgs:
     - --nodeport-addresses=0.0.0.0/0
     - --enable-endpoint-routes
-    - --enable-l7-proxy=false
     nodePort:
       enabled: true
       bindProtection: true
